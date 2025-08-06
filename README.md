@@ -3,9 +3,8 @@
 > **📋 Challenge Submission Status: ✅ COMPLETE**
 > 
 > This implementation **FULLY SATISFIES** all challenge requirements. Please review:
-> - 📄 **[CHALLENGE_SUBMISSION.md](./CHALLENGE_SUBMISSION.md)** - Executive summary & compliance
 > - 📝 **[CHALLENGE_WRITEUP.md](./CHALLENGE_WRITEUP.md)** - Technical decisions & architecture
-> - ✅ **[MVP_COMPLETED.md](./MVP_COMPLETED.md)** - Implementation details
+
 
 A chat-based agent that helps users analyze data-heavy reports (charts and user comments) to extract insights on social media activity related to a media brand.
 
@@ -39,17 +38,20 @@ brandBastion/
 2. **Create environment file**
    ```bash
    cp env.example .env
-   # Edit .env with your API keys and Supabase credentials
+   # Edit .env with your OpenAI API key and other credentials
    ```
 
-3. **Build the services**
+3. **Build and start the application**
    ```bash
-   make build
+   docker-compose up --build
    ```
 
-4. **Start the application**
+4. **Process the vector database**
    ```bash
-   make up
+   docker exec -it brandbastion-data-pipeline-1 python /app/scripts/process_data.py \
+     --pdf-dir /app/data/raw/pdfs \
+     --comments-dir /app/data/raw/comments \
+     --index-name brandbastion
    ```
 
 5. **Access the application**
@@ -65,7 +67,10 @@ brandBastion/
 2. Place comment files in `data/raw/comments/`
 3. Run the data pipeline:
    ```bash
-   make process-data
+   docker exec -it brandbastion-data-pipeline-1 python /app/scripts/process_data.py \
+     --pdf-dir /app/data/raw/pdfs \
+     --comments-dir /app/data/raw/comments \
+     --index-name brandbastion
    ```
 
 ### Using the Chat Interface
@@ -81,35 +86,36 @@ brandBastion/
 
 ```bash
 # Backend only
-make backend
+docker-compose up backend
 
 # Frontend only
-make frontend
+docker-compose up frontend
 
 # Data pipeline
-make data-pipeline
+docker-compose up data-pipeline
 ```
 
 ### Accessing service shells
 
 ```bash
 # Backend shell
-make shell-backend
+docker exec -it brandbastion-backend-1 bash
 
 # Data pipeline shell
-make shell-data
+docker exec -it brandbastion-data-pipeline-1 bash
 ```
 
-### Running tests
+### Managing containers
 
 ```bash
-make test
-```
+# Stop all services
+docker-compose down
 
-### Linting
+# View logs
+docker-compose logs
 
-```bash
-make lint
+# Rebuild specific service
+docker-compose up --build <service-name>
 ```
 
 ## Key Components
@@ -157,24 +163,25 @@ make lint
 
 1. Create a feature branch
 2. Make your changes
-3. Run tests and linting
-4. Submit a pull request
+3. Submit a pull request
 
 ## Challenge Testing Guide
 
 ### Quick Start for Challenge Review
 
 ```bash
-# 1. Set OpenAI API key
-export OPENAI_API_KEY="your-key-here"
+# 1. Configure environment
+cp env.example .env
+# Edit .env and add your OPENAI_API_KEY
 
 # 2. Start services
 docker-compose up --build
 
 # 3. Process challenge data (in another terminal)
-docker exec -it brandbastion-backend python /app/data-pipeline/scripts/process_data.py \
+docker exec -it brandbastion-data-pipeline-1 python /app/scripts/process_data.py \
   --pdf-dir /app/data/raw/pdfs \
-  --comments-dir /app/data/raw/comments
+  --comments-dir /app/data/raw/comments \
+  --index-name brandbastion
 
 # 4. Open http://localhost:3000
 ```
