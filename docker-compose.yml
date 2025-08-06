@@ -1,0 +1,89 @@
+version: '3.8'
+
+services:
+  # Frontend - Next.js
+  frontend:
+    build:
+      context: ./ui/brandbastion-challenge
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://backend:8000
+    depends_on:
+      - backend
+    networks:
+      - brandbastion-network
+
+  # Backend - FastAPI + LangGraph/LangChain
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_KEY=${SUPABASE_KEY}
+      - SUPABASE_SERVICE_KEY=${SUPABASE_SERVICE_KEY}
+      - SUPABASE_STORAGE_BUCKET=${SUPABASE_STORAGE_BUCKET:-brandbastion-files}
+      - FAISS_INDEX_PATH=/app/vector-db/indices
+      - REDIS_URL=redis://redis:6379
+    volumes:
+      - ./vector-db/indices:/app/vector-db/indices
+      - ./data/uploads:/app/uploads
+    depends_on:
+      - redis
+      - data-pipeline
+    networks:
+      - brandbastion-network
+
+  # Data Pipeline - Processing & Vectorization
+  data-pipeline:
+    build:
+      context: ./data-pipeline
+      dockerfile: Dockerfile
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_KEY=${SUPABASE_KEY}
+      - FAISS_INDEX_PATH=/app/vector-db/indices
+    volumes:
+      - ./vector-db/indices:/app/vector-db/indices
+      - ./data/raw:/app/data/raw
+      - ./data/processed:/app/data/processed
+    networks:
+      - brandbastion-network
+
+  # Redis for session management
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - brandbastion-network
+
+  # PostgreSQL (if you want local instead of Supabase)
+  # postgres:
+  #   image: postgres:15-alpine
+  #   environment:
+  #     - POSTGRES_DB=brandbastion
+  #     - POSTGRES_USER=${POSTGRES_USER}
+  #     - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+  #   ports:
+  #     - "5432:5432"
+  #   volumes:
+  #     - postgres-data:/var/lib/postgresql/data
+  #   networks:
+  #     - brandbastion-network
+
+networks:
+  brandbastion-network:
+    driver: bridge
+
+volumes:
+  redis-data:
+  # postgres-data:
